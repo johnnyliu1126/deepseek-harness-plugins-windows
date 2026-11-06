@@ -18,7 +18,7 @@ class PlatformTest(unittest.TestCase):
 
     def test_accepts_matching_native_runtime(self):
         module = self.load_support()
-        expected = json.loads((ROOT / 'platform.json').read_text())
+        expected = json.loads((ROOT / 'platform.json').read_text(encoding='utf-8'))
         machine = 'AMD64' if expected['architecture'] == 'x64' else 'aarch64'
         os_id = 'win32' if expected['system'] == 'Windows' else 'darwin'
         report = module.validate_runtime(expected, expected['system'], machine, os_id + ':' + expected['architecture'])
@@ -26,20 +26,20 @@ class PlatformTest(unittest.TestCase):
 
     def test_rejects_wrong_os(self):
         module = self.load_support()
-        expected = json.loads((ROOT / 'platform.json').read_text())
+        expected = json.loads((ROOT / 'platform.json').read_text(encoding='utf-8'))
         with self.assertRaisesRegex(ValueError, 'requires'):
             module.validate_runtime(expected, 'Linux', 'x86_64')
 
     def test_rejects_wrong_cpu(self):
         module = self.load_support()
-        expected = json.loads((ROOT / 'platform.json').read_text())
+        expected = json.loads((ROOT / 'platform.json').read_text(encoding='utf-8'))
         wrong = 'arm64' if expected['architecture'] == 'x64' else 'x86_64'
         with self.assertRaisesRegex(ValueError, 'requires'):
             module.validate_runtime(expected, expected['system'], wrong)
 
     def test_rejects_node_architecture_mismatch(self):
         module = self.load_support()
-        expected = json.loads((ROOT / 'platform.json').read_text())
+        expected = json.loads((ROOT / 'platform.json').read_text(encoding='utf-8'))
         wrong = 'arm64' if expected['architecture'] == 'x64' else 'x64'
         os_id = 'win32' if expected['system'] == 'Windows' else 'darwin'
         with self.assertRaisesRegex(ValueError, 'Node'):
@@ -47,9 +47,11 @@ class PlatformTest(unittest.TestCase):
 
     def test_windows_cmd_path_is_quoted(self):
         module = self.load_support()
-        command = module.manager_command(r'C:\Program Files\nodejs\npm.cmd', ['install', '--ignore-scripts'], system='Windows')
-        self.assertIn('/c', command)
-        self.assertIn('"C:\\Program Files\\nodejs\\npm.cmd"', command[-1])
+        with tempfile.TemporaryDirectory() as tmp:
+            shim = Path(tmp) / 'fixture manager.cmd'
+            command = module.manager_command(str(shim), ['install', '--ignore-scripts'], system='Windows')
+            self.assertIn('/c', command)
+            self.assertIn('"' + str(shim) + '"', command[-1])
 
     def test_windows_npm_uses_native_node_entry_when_available(self):
         module = self.load_support()
@@ -64,8 +66,8 @@ class PlatformTest(unittest.TestCase):
             self.assertNotIn('/c', command)
 
     def test_catalog_has_no_excluded_packages(self):
-        expected = json.loads((ROOT / 'platform.json').read_text())
-        names = {p['name'] for p in json.loads((ROOT / 'catalog.lock.json').read_text())['packages']}
+        expected = json.loads((ROOT / 'platform.json').read_text(encoding='utf-8'))
+        names = {p['name'] for p in json.loads((ROOT / 'catalog.lock.json').read_text(encoding='utf-8'))['packages']}
         self.assertTrue(names.isdisjoint(expected['excludedPackages']))
         self.assertFalse(any(n.startswith('@deepseek-ai/') for n in names))
 
