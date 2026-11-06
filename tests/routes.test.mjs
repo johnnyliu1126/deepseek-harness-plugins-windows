@@ -67,4 +67,3 @@ test('balance coalesces simultaneous requests instead of querying twice', async 
   assert.equal(queries, 1);
   assert.ok(results.every(result => result.json.status === 'ready'));
 });
-
